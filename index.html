@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Research Assistant – MCP Project</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f11;color:#e8e8e8;min-height:100vh}
+.app{max-width:800px;margin:0 auto;padding:2rem 1rem}
+header{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid #222}
+header h1{font-size:1.6rem;font-weight:600;color:#fff;margin-bottom:4px}
+header p{font-size:14px;color:#888}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#1a1a2e;color:#7c6af7;border:1px solid #7c6af730;margin-right:6px;vertical-align:middle}
+.search-box{background:#161618;border:1px solid #2a2a2a;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.search-row{display:flex;gap:10px;align-items:flex-start}
+textarea{flex:1;background:#0f0f11;border:1px solid #2a2a2a;border-radius:8px;padding:10px 14px;font-size:15px;color:#e8e8e8;font-family:inherit;resize:none;min-height:64px;transition:border 0.2s}
+textarea:focus{outline:none;border-color:#7c6af7}
+textarea::placeholder{color:#444}
+.btn{padding:10px 20px;border-radius:8px;border:none;font-family:inherit;font-size:14px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn-primary{background:#7c6af7;color:#fff;font-weight:600}
+.btn-primary:hover{background:#6a58e0}
+.btn-primary:active{transform:scale(0.97)}
+.btn-sm{padding:7px 14px;background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;border-radius:8px}
+.btn-sm:hover{background:#222;color:#fff}
+.mode-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.mode-label{font-size:13px;color:#666;margin-right:4px}
+.mode-btn{padding:5px 14px;border-radius:20px;border:1px solid #2a2a2a;background:transparent;color:#666;font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.mode-btn.active{background:#7c6af720;color:#7c6af7;border-color:#7c6af750}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem}
+.chip{padding:6px 14px;border-radius:20px;border:1px solid #2a2a2a;background:#161618;color:#888;font-size:13px;cursor:pointer;transition:all 0.15s}
+.chip:hover{border-color:#7c6af7;color:#7c6af7}
+.status{font-size:13px;color:#888;padding:10px 0;display:none;align-items:center;gap:8px}
+.spinner{width:14px;height:14px;border:2px solid #333;border-top-color:#7c6af7;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.report{display:none;background:#161618;border:1px solid #2a2a2a;border-radius:12px;padding:1.5rem;margin-top:1rem}
+.report-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:12px}
+.report-title{font-size:17px;font-weight:600;color:#fff;flex:1}
+.report-meta{font-size:12px;color:#555;margin-top:4px}
+.report-actions{display:flex;gap:8px;flex-shrink:0}
+.report-content{font-size:15px;line-height:1.75;color:#ccc}
+.report-content h2{font-size:15px;font-weight:600;color:#fff;margin:1.5rem 0 0.5rem;padding-bottom:6px;border-bottom:1px solid #222}
+.report-content h3{font-size:14px;font-weight:600;color:#aaa;margin:1rem 0 0.3rem}
+.report-content p{margin-bottom:0.75rem}
+.report-content ul,.report-content ol{margin:0.4rem 0 0.75rem 1.5rem}
+.report-content li{margin-bottom:0.35rem}
+.report-content a{color:#7c6af7;text-decoration:none}
+.report-content a:hover{text-decoration:underline}
+.report-content strong{color:#e8e8e8;font-weight:600}
+.saved-section{margin-top:2rem;border-top:1px solid #222;padding-top:1.5rem}
+.saved-title{font-size:13px;font-weight:600;color:#555;margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em}
+.saved-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #222;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background 0.1s}
+.saved-item:hover{background:#1a1a1a}
+.saved-q{font-size:14px;font-weight:500;color:#ddd;flex:1}
+.saved-m{font-size:12px;color:#555;margin-top:2px}
+.del-btn{background:none;border:none;color:#444;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:13px}
+.del-btn:hover{background:#2a1a1a;color:#e05}
+.error{color:#e05;font-size:13px;padding:8px 0}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #1a1a1a;font-size:12px;color:#444;text-align:center}
+@media(max-width:600px){.search-row{flex-direction:column}.report-header{flex-direction:column}.report-actions{width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🔍 AI Research Assistant <span class="badge">MCP Project</span></h1>
+    <p>Ask anything — searches the web in real-time via Anthropic's MCP web search tool and synthesizes a structured report.</p>
+  </header>
+
+  <div class="search-box">
+    <div class="search-row">
+      <textarea id="queryInput" placeholder="What do you want to research? e.g. 'Latest breakthroughs in quantum computing'" rows="2"></textarea>
+      <button class="btn btn-primary" onclick="runResearch()">Research →</button>
+    </div>
+    <div class="mode-row">
+      <span class="mode-label">Depth:</span>
+      <button class="mode-btn active" id="modeQuick" onclick="setMode('quick')">Quick</button>
+      <button class="mode-btn" id="modeDeep" onclick="setMode('deep')">Deep</button>
+    </div>
+  </div>
+
+  <div class="chips">
+    <span class="chip" onclick="setQuery(this)">Latest breakthroughs in quantum computing</span>
+    <span class="chip" onclick="setQuery(this)">Pros and cons of intermittent fasting</span>
+    <span class="chip" onclick="setQuery(this)">How does Anthropic's business model work?</span>
+    <span class="chip" onclick="setQuery(this)">Impact of AI on software engineering jobs</span>
+  </div>
+
+  <div class="status" id="status">
+    <div class="spinner"></div>
+    <span id="statusText">Searching the web...</span>
+  </div>
+
+  <div class="report" id="report">
+    <div class="report-header">
+      <div>
+        <div class="report-title" id="reportTitle"></div>
+        <div class="report-meta" id="reportMeta"></div>
+      </div>
+      <div class="report-actions">
+        <button class="btn btn-sm" id="copyBtn" onclick="copyReport()">📋 Copy</button>
+        <button class="btn btn-sm" onclick="saveReport()">🔖 Save</button>
+      </div>
+    </div>
+    <div class="report-content" id="reportContent"></div>
+  </div>
+
+  <div class="saved-section" id="savedSection" style="display:none">
+    <div class="saved-title">Saved Reports</div>
+    <div id="savedList"></div>
+  </div>
+
+  <footer>Built with React + Anthropic API + MCP Web Search Tool &nbsp;·&nbsp; MCP Workshop Project</footer>
+</div>
+
+<script>
+let currentMode = 'quick';
+let currentReport = null;
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('modeQuick').className = 'mode-btn' + (m==='quick'?' active':'');
+  document.getElementById('modeDeep').className = 'mode-btn' + (m==='deep'?' active':'');
+}
+
+function setQuery(el) { document.getElementById('queryInput').value = el.textContent; }
+
+function showStatus(t) {
+  const s = document.getElementById('status');
+  s.style.display = 'flex';
+  document.getElementById('statusText').textContent = t;
+  const sp = s.querySelector('.spinner');
+  if (sp) sp.style.display = t.startsWith('Error') ? 'none' : 'block';
+}
+function hideStatus() { document.getElementById('status').style.display = 'none'; }
+
+function renderMarkdown(text) {
+  const lines = text.split('\n');
+  let html = '', inList = false, listType = 'ul', para = [];
+  function flushPara() {
+    if (!para.length) return;
+    const t = para.join(' ').trim();
+    if (t) html += '<p>' + t + '</p>';
+    para = [];
+  }
+  function fmt(line) {
+    return line
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+  for (const raw of lines) {
+    const line = fmt(raw);
+    if (/^## /.test(raw)) { flushPara(); if(inList){html+=`</${listType}>`;inList=false;} html+='<h2>'+line.replace(/^## /,'')+'</h2>'; }
+    else if (/^### /.test(raw)) { flushPara(); if(inList){html+=`</${listType}>`;inList=false;} html+='<h3>'+line.replace(/^### /,'')+'</h3>'; }
+    else if (/^[-*] /.test(raw)) { flushPara(); if(!inList||listType!=='ul'){if(inList)html+=`</${listType}>`;html+='<ul>';inList=true;listType='ul';} html+='<li>'+line.replace(/^[-*] /,'')+'</li>'; }
+    else if (/^\d+\. /.test(raw)) { flushPara(); if(!inList||listType!=='ol'){if(inList)html+=`</${listType}>`;html+='<ol>';inList=true;listType='ol';} html+='<li>'+line.replace(/^\d+\. /,'')+'</li>'; }
+    else if (raw.trim()==='') { flushPara(); if(inList){html+=`</${listType}>`;inList=false;} }
+    else { if(inList){html+=`</${listType}>`;inList=false;} para.push(line); }
+  }
+  flushPara(); if(inList) html+=`</${listType}>`;
+  return html;
+}
+
+async function runResearch() {
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
+  document.getElementById('report').style.display = 'none';
+  showStatus('Searching the web...');
+  const isDeep = currentMode === 'deep';
+
+  const systemPrompt = `You are a research assistant. Use web search to find current, accurate information. Synthesize into a clean structured report using these exact markdown sections:
+
+## Summary
+2-3 sentence executive summary.
+
+## Key findings
+Bullet points of the most important facts.
+
+## ${isDeep ? 'Deep analysis' : 'Overview'}
+${isDeep ? '4-5 paragraphs covering multiple perspectives, technical details, and nuances.' : '2-3 paragraphs covering the topic clearly.'}
+
+## Different perspectives
+Brief coverage of contrasting views or debates.
+
+## Sources
+List sources with URLs.
+
+Be factual, cite specific data, be concise. No preamble or closing remarks outside these sections.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: isDeep ? 2000 : 1000,
+        system: systemPrompt,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: query }]
+      })
+    });
+
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message||'API error'); }
+    const data = await res.json();
+    const textBlock = data.content.find(b => b.type === 'text');
+    const reportText = textBlock?.text || 'No report generated.';
+
+    currentReport = { query, text: reportText, mode: currentMode, date: new Date().toISOString() };
+    document.getElementById('reportTitle').textContent = query;
+    document.getElementById('reportMeta').textContent = (isDeep ? 'Deep' : 'Quick') + ' · ' + new Date().toLocaleString();
+    document.getElementById('reportContent').innerHTML = renderMarkdown(reportText);
+    hideStatus();
+    document.getElementById('report').style.display = 'block';
+  } catch(e) {
+    showStatus('Error: ' + e.message);
+  }
+}
+
+async function copyReport() {
+  if (!currentReport) return;
+  await navigator.clipboard.writeText('# ' + currentReport.query + '\n\n' + currentReport.text);
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+}
+
+function saveReport() {
+  if (!currentReport) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('research-reports') || '[]');
+    saved.unshift(currentReport);
+    if (saved.length > 20) saved.pop();
+    localStorage.setItem('research-reports', JSON.stringify(saved));
+    renderSaved();
+  } catch(e) { console.error(e); }
+}
+
+function deleteReport(idx) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('research-reports') || '[]');
+    saved.splice(idx, 1);
+    localStorage.setItem('research-reports', JSON.stringify(saved));
+    renderSaved();
+  } catch(e) {}
+}
+
+function loadReport(r) {
+  currentReport = r;
+  document.getElementById('queryInput').value = r.query;
+  document.getElementById('reportTitle').textContent = r.query;
+  document.getElementById('reportMeta').textContent = (r.mode==='deep'?'Deep':'Quick') + ' · ' + new Date(r.date).toLocaleString() + ' (saved)';
+  document.getElementById('reportContent').innerHTML = renderMarkdown(r.text);
+  document.getElementById('report').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderSaved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('research-reports') || '[]');
+    const sec = document.getElementById('savedSection');
+    const list = document.getElementById('savedList');
+    if (!saved.length) { sec.style.display = 'none'; return; }
+    sec.style.display = 'block';
+    list.innerHTML = saved.map((r,i) => `
+      <div class="saved-item">
+        <div style="flex:1" onclick="loadSaved(${i})">
+          <div class="saved-q">${r.query}</div>
+          <div class="saved-m">${r.mode==='deep'?'Deep':'Quick'} · ${new Date(r.date).toLocaleDateString()}</div>
+        </div>
+        <button class="del-btn" onclick="deleteReport(${i})">🗑</button>
+      </div>`).join('');
+    window._savedReports = saved;
+  } catch(e) {}
+}
+
+function loadSaved(i) { loadReport(window._savedReports[i]); }
+
+document.getElementById('queryInput').addEventListener('keydown', e => {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); runResearch(); }
+});
+
+renderSaved();
+</script>
+</body>
+</html>
